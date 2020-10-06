@@ -1,0 +1,103 @@
+version: '3'
+services:
+  # if you don't want to use https, just delete certbot block 
+  certbot:
+   image: certbot/certbot
+   restart: unless-stopped
+   volumes:
+     - ./certbot/conf:/etc/letsencrypt
+     - ./certbot/www:/var/www/certbot
+   entrypoint: "/bin/sh -c 'trap exit TERM; while :; do certbot renew; sleep 12h &     wait $${!}; done;'"
+  # --------------------------------------------------------------
+  nginx:
+    image: nginx:1.15-alpine
+    volumes:
+      - ./nginx/conf.d/:/etc/nginx/conf.d/
+      - ./nginx/log/:/var/log/nginx/
+      - ./certbot/conf:/etc/letsencrypt
+      - ./certbot/www:/var/www/certbot
+    container_name: nodeApp_nginx
+    restart: unless-stopped
+    ports:
+     - "80:80"
+    # if you don't want to use https, just delete port 443
+     - "443:443"
+    # if you don't want to use https, just delete command line
+    command: "/bin/sh -c 'while :; do sleep 6h & wait $${!}; nginx -s reload; done &     nginx -g \"daemon off;\"'"
+    depends_on:
+     - nodejs
+     - nodejs_2
+     - nodejs_3
+    networks:
+     - app-network
+  mysql:
+   build:
+    context: ./mysql
+    dockerfile: Dockerfile
+   container_name: mysql
+   restart: always
+   ports:
+    - "3306:3306"
+   environment:
+    - MYSQL_ROOT_PASSWORD=example
+    - MYSQL_USER=example
+    - MYSQL_PASSWORD=example
+    - MYSQL_DATABASE=example
+    - TZ=Asia/Taipei
+   volumes:
+     - ./mysql/lib:/var/lib/mysql
+   command: --character-set-server=utf8mb4 --collation-server=utf8mb4_unicode_ci
+   networks:
+     - app-network
+  nodejs:
+    build:
+     context: ./nodeApp
+     dockerfile: Dockerfile
+    image: nodejs
+    container_name: nodejs
+    restart: always
+    environment:
+      - NODE_ENV=production
+      - PORT=3000
+    depends_on: 
+     - mysql
+    links:
+     - mysql:mysql
+    networks:
+     - app-network
+  nodejs_2:
+    build:
+     context: ./nodeApp
+     dockerfile: Dockerfile
+    image: nodejs
+    container_name: nodejs_2
+    restart: always
+    environment:
+      - NODE_ENV=production
+      - PORT=3000
+    depends_on: 
+     - mysql
+    links:
+     - mysql:mysql
+    networks:
+     - app-network
+  nodejs_3:
+    build:
+     context: ./nodeApp
+     dockerfile: Dockerfile
+    image: nodejs
+    container_name: nodejs_3
+    restart: always
+    environment:
+      - NODE_ENV=production
+      - PORT=3000
+    depends_on: 
+     - mysql
+    links:
+     - mysql:mysql
+    networks:
+     - app-network
+
+networks:
+  app-network:
+    driver: bridge

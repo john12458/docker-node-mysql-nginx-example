@@ -1,0 +1,5 @@
+mysql/lib/*
+nginx/log/*
+nginx/conf.d/*
+certbot/*
+nginx-cerbot/data/certbot/*
